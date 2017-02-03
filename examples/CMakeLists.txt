@@ -45,6 +45,7 @@ SET(Protonect_src
 
 SET(Protonect_LIBRARIES
   ${freenect2_LIBRARIES}
+  lcm
 )
 
 SET(Protonect_DLLS

@@ -25,7 +25,8 @@
  */
 
 /** @file Protonect.cpp Main application file. */
-
+#include <lcm/lcm-cpp.hpp>
+#include "kinect/depth_msg_t.hpp"
 #include <iostream>
 #include <cstdlib>
 #include <signal.h>
@@ -110,6 +111,12 @@ public:
 int main(int argc, char *argv[])
 /// [main]
 {
+
+  //check lcm 
+  lcm::LCM lcm;
+  if(!lcm.good())
+    return 1;
+
   std::string program_path(argv[0]);
   std::cerr << "Version: " << LIBFREENECT2_VERSION << std::endl;
   std::cerr << "Environment variables: LOGFILE=<protonect.log>" << std::endl;
@@ -344,8 +351,7 @@ int main(int argc, char *argv[])
 #else
   viewer_enabled = false;
 #endif
-
-/// [loop start]
+/// [loop start
   while(!protonect_shutdown && (framemax == (size_t)-1 || framecount < framemax))
   {
     if (!listener.waitForNewFrame(frames, 10*1000)) // 10 sconds
@@ -356,6 +362,19 @@ int main(int argc, char *argv[])
     libfreenect2::Frame *rgb = frames[libfreenect2::Frame::Color];
     libfreenect2::Frame *ir = frames[libfreenect2::Frame::Ir];
     libfreenect2::Frame *depth = frames[libfreenect2::Frame::Depth];
+
+    kinect::depth_msg_t depthImage;
+
+    //lcm publishing
+     depthImage.width = depth->width;
+     depthImage.height = depth->height;
+     depthImage.depth_data_nbytes = depth->bytes_per_pixel * depth->height * depth->width;
+     depthImage.timestamp = 0;
+     depthImage.depth_data.resize(depthImage.depth_data_nbytes);
+     for(int i = 0; i < depthImage.depth_data_nbytes; i++){
+           depthImage.depth_data[i] = depth->data[i];
+     }
+     lcm.publish("DEPTH_IMAGE", &depthImage);
 /// [loop start]
 
     if (enable_rgb && enable_depth)
