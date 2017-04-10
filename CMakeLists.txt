@@ -344,21 +344,24 @@ IF(ENABLE_CUDA)
     SET(LIBFREENECT2_WITH_CUDA_SUPPORT 1)
     SET(HAVE_CUDA yes)
 
-    STRING(REPLACE "\\" "/" NVCUDASAMPLES_ROOT "$ENV{NVCUDASAMPLES_ROOT};$ENV{NVCUDASAMPLES8_0_ROOT}")
+    STRING(REPLACE "\\" "/" NVCUDASAMPLES_ROOT "$ENV{NVCUDASAMPLES_ROOT}")
+    STRING(REPLACE "\\" "/" NVCUDASAMPLES8_0_ROOT "$ENV{NVCUDASAMPLES8_0_ROOT}")
     CUDA_INCLUDE_DIRECTORIES(
       "${MY_DIR}/include/"
       "${CUDA_TOOLKIT_ROOT_DIR}/samples/common/inc"
       "${NVCUDASAMPLES_ROOT}/common/inc"
+      "${NVCUDASAMPLES8_0_ROOT}/common/inc"
     )
     SET(CUDA_FLAGS -use_fast_math)
     IF(NOT MSVC)
       SET(CUDA_FLAGS "${CUDA_FLAGS} -Xcompiler -fPIC")
     ENDIF()
+    IF(HAVE_CXX11 EQUAL yes AND CUDA_VERSION VERSION_GREATER 7.0)
+      SET(CUDA_FLAGS "${CUDA_FLAGS} -std=c++11")
+    ENDIF()
 
     SET(OLD_CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
-    IF(CUDA_VERSION VERSION_LESS 7.0)
-      STRING(REGEX REPLACE "-std=c\\+\\+.." "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
-    ENDIF()
+    STRING(REGEX REPLACE "-std=c\\+\\+.." "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
     CUDA_COMPILE(CUDA_OBJECTS
       src/cuda_depth_packet_processor.cu
       src/cuda_kde_depth_packet_processor.cu
@@ -377,6 +380,16 @@ IF(ENABLE_CUDA)
     )
   ENDIF()
 ENDIF(ENABLE_CUDA)
+
+# RPATH handling for CUDA 8.0 libOpenCL.so conflict. See #804.
+IF(HAVE_OpenCL EQUAL yes AND UNIX AND NOT APPLE)
+  FILE(GLOB CUDA_ld_so_conf /etc/ld.so.conf.d/cuda*.conf)
+  IF(CUDA_ld_so_conf)
+    MESSAGE(WARNING "Your CUDA installation overrides OpenCL system library path.")
+    GET_FILENAME_COMPONENT(OpenCL_LIB_PATH ${OpenCL_LIBRARY} DIRECTORY)
+    SET(CMAKE_INSTALL_RPATH ${OpenCL_LIB_PATH} CACHE STRING "Set RPATH for system OpenCL")
+  ENDIF()
+ENDIF()
 
 # RPATH handling for private libusb copies
 # Users have two options:
