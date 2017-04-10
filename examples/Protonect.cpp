@@ -27,6 +27,10 @@
 /** @file Protonect.cpp Main application file. */
 #include <lcm/lcm-cpp.hpp>
 #include "kinect/depth_msg_t.hpp"
+#include "kinect/images_t.hpp"
+#include "kinect/image_t.hpp"
+
+
 #include <iostream>
 #include <cstdlib>
 #include <signal.h>
@@ -363,18 +367,20 @@ int main(int argc, char *argv[])
     libfreenect2::Frame *ir = frames[libfreenect2::Frame::Ir];
     libfreenect2::Frame *depth = frames[libfreenect2::Frame::Depth];
 
-    kinect::depth_msg_t depthImage;
 
-    //lcm publishing
+    kinect::image_t depthImage;
+    //lcm publishingdepth_msg_t.hpp 
      depthImage.width = depth->width;
      depthImage.height = depth->height;
-     depthImage.depth_data_nbytes = depth->bytes_per_pixel * depth->height * depth->width;
-     depthImage.timestamp = 0;
-     depthImage.depth_data.resize(depthImage.depth_data_nbytes);
-     for(int i = 0; i < depthImage.depth_data_nbytes; i++){
-           depthImage.depth_data[i] = depth->data[i];
-     }
-     lcm.publish("DEPTH_IMAGE", &depthImage);
+     std::size_t data_size = depth->bytes_per_pixel * depth->height * depth->width;
+
+     depthImage.data.resize(data_size);
+     depthImage.nmetadata =0;
+     depthImage.size = data_size;
+
+     memcpy(&depthImage.data[0], depth->data, data_size);
+
+     lcm.publish("OPENNI_FRAME", &depthImage);
 /// [loop start]
 
     if (enable_rgb && enable_depth)
