@@ -368,8 +368,7 @@ int main(int argc, char *argv[])
     libfreenect2::Frame *depth = frames[libfreenect2::Frame::Depth];
 
 
-    kinect::image_t depthImage;
-    //lcm publishingdepth_msg_t.hpp 
+     kinect::image_t depthImage;
      depthImage.width = depth->width;
      depthImage.height = depth->height;
      std::size_t data_size = depth->bytes_per_pixel * depth->height * depth->width;
@@ -377,10 +376,30 @@ int main(int argc, char *argv[])
      depthImage.data.resize(data_size);
      depthImage.nmetadata =0;
      depthImage.size = data_size;
-
      memcpy(&depthImage.data[0], depth->data, data_size);
 
-     lcm.publish("OPENNI_FRAME", &depthImage);
+     kinect::image_t rgbImage;
+     rgbImage.pixelformat = kinect::image_t::PIXEL_FORMAT_RGB;
+     rgbImage.width = rgb->width;
+     rgbImage.height = rgb->height;
+     data_size = rgb->bytes_per_pixel * rgb->height * rgb->width;
+
+     rgbImage.data.resize(data_size);
+     rgbImage.nmetadata =0;
+     rgbImage.size = data_size;
+     memcpy(&rgbImage.data[0], rgb->data, data_size);
+
+     kinect::images_t images;
+     images.utime = rgb->timestamp;
+     images.n_images = 2;
+     images.images.push_back(rgbImage);
+     images.images.push_back(depthImage);
+     images.image_types.push_back( 0 ) ;//LEFT = 0
+     images.image_types.push_back( 4 ) ;//DEPTH_MM = 4
+
+
+
+     lcm.publish("OPENNI_FRAME", &images);
 /// [loop start]
 
     if (enable_rgb && enable_depth)
